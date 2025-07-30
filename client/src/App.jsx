@@ -4,6 +4,8 @@ import { createBrowserRouter, Navigate, RouterProvider } from "react-router-dom"
 // Lazy Load Components
 const Home = lazy(() => import("./components/public/home"));
 const OtpVerification = lazy(() => import("./components/public/OtpVerification"));
+const ForgotPassword = lazy(() => import("./components/public/ForgotPassword"));
+const ResetPassword = lazy(() => import("./components/public/ResetPassword"));
 const Login = lazy(() => import("./components/public/login"));
 const Register = lazy(() => import("./components/public/register"));
 const ContactUs = lazy(() => import("./components/public/ContactUs"));
@@ -39,6 +41,8 @@ const PrivateAdminRoute = ({ element }) => {
 const publicRoutes = [
     { path: "/", element: <Suspense><Home /></Suspense> },
     { path: "/verify-otp", element: <Suspense><OtpVerification /></Suspense> },
+    { path: "/forgot-password", element: <Suspense><ForgotPassword /></Suspense> },
+    { path: "/reset-password", element: <Suspense><ResetPassword /></Suspense> },
     { path: "/login", element: <Suspense><Login /></Suspense> },
     { path: "/register", element: <Suspense><Register /></Suspense> },
     { path: "/contact-us", element: <Suspense><ContactUs /></Suspense> },
@@ -78,4 +82,3 @@ function App() {
 }
 
 export default App;
-// 

@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
+import { FaUserCircle } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
 
 const Navbar = () => {
@@ -39,11 +40,26 @@ const Navbar = () => {
 
           {/* Right Section - Navigation Links */}
           <div className="flex items-center space-x-6">
-            {/* User Actions */}
-            {/* REMOVED: My Account button and dropdown */}
-
-            {/* Show Sign In and Sign Up when not logged in (desktop) */}
-            {!isLoggedIn && (
+            {/* Profile and Sign Out for logged in users */}
+            {isLoggedIn ? (
+              <>
+                <Link
+                  to="/profile"
+                  className="flex items-center justify-center ml-4 w-10 h-10 rounded-full bg-[#E04848]/10 border border-[#E04848]/30 shadow-sm hover:bg-[#E04848]/20 transition relative"
+                  title="Profile"
+                  style={{ minWidth: '40px', minHeight: '40px' }}
+                >
+                  <FaUserCircle className="text-2xl text-[#E04848]" />
+                  <span className="hidden md:inline ml-2 font-semibold text-[#E04848]">Profile</span>
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="ml-2 px-4 py-1 bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-lg hover:from-green-600 hover:to-blue-600 transition duration-300 font-semibold"
+                >
+                  Sign Out
+                </button>
+              </>
+            ) : (
               <>
                 <Link
                   to="/login"
@@ -59,24 +75,27 @@ const Navbar = () => {
                 </Link>
               </>
             )}
-
-            {/* Sign Out Button */}
-            {isLoggedIn && (
-              <button
-                onClick={handleLogout}
-                className="px-4 py-1 bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-lg hover:from-green-600 hover:to-blue-600 transition duration-300"
-              >
-                Sign Out
-              </button>
-            )}
           </div>
         </div>
 
         {/* Mobile User Actions */}
         <div className="md:hidden pt-4 border-t border-gray-200">
           {isLoggedIn ? (
-            <div className="space-y-2">
-              {/* REMOVED: Profile, My Bookings, and Sign Out links */}
+            <div className="space-y-3 flex flex-col items-stretch">
+              <Link
+                to="/profile"
+                className="flex items-center justify-center w-full px-4 py-3 rounded-2xl bg-[#E04848]/10 border border-[#E04848]/30 shadow-sm hover:bg-[#E04848]/20 transition text-[#E04848] font-semibold"
+                title="Profile"
+              >
+                <FaUserCircle className="text-2xl mr-2" />
+                Profile
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="w-full px-4 py-3 rounded-2xl bg-gradient-to-r from-green-500 to-blue-500 text-white font-semibold shadow-md hover:from-green-600 hover:to-blue-600 transition"
+              >
+                Sign Out
+              </button>
             </div>
           ) : (
             <div className="space-y-3">

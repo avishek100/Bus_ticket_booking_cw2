@@ -755,154 +755,311 @@ exports.updatePassword = asyncHandler(async (req, res, next) => {
 // @desc    Send password reset link
 // @route   POST /api/v1/auth/forgot-password
 // @access  Public
-exports.forgotPassword = asyncHandler(async (req, res, next) => {
-  console.log("Forgot Password Payload:", req.body);
+// exports.forgotPassword = asyncHandler(async (req, res, next) => {
+//   console.log("Forgot Password Payload:", req.body);
+//   const { email } = req.body;
+
+//   if (!email) {
+//     try {
+//       await ActivityLog.create({
+//         action: "Password Reset Request",
+//         userEmail: email || "Unknown",
+//         success: false,
+//         details: "Email is required",
+//         ipAddress: req.ip || req.connection.remoteAddress,
+//       });
+//     } catch (logError) {
+//       console.error("ActivityLog Error:", logError.message);
+//     }
+//     return res.status(400).json({ success: false, message: "Email is required" });
+//   }
+
+//   const customer = await Customer.findOne({ email: sanitizeHtml(email.trim().toLowerCase()) });
+//   if (!customer) {
+//     try {
+//       await ActivityLog.create({
+//         action: "Password Reset Request",
+//         userEmail: email,
+//         success: false,
+//         details: "No account found with that email",
+//         ipAddress: req.ip || req.connection.remoteAddress,
+//       });
+//     } catch (logError) {
+//       console.error("ActivityLog Error:", logError.message);
+//     }
+//     return res.status(404).json({ success: false, message: "No account found with that email" });
+//   }
+
+//   const resetToken = crypto.randomBytes(20).toString("hex");
+//   const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+
+//   customer.resetPasswordToken = hashedToken;
+//   customer.resetPasswordExpire = Date.now() + 60 * 60 * 1000; // 1 hour
+//   await customer.save();
+
+//   const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
+
+//   try {
+//     console.log("Sending password reset email to:", customer.email);
+//     await sendEmail({
+//       email: customer.email,
+//       subject: "Reset Your GoBus Password",
+//       message: `Hi ${customer.fname},\n\nYou requested to reset your password. Please click the link below:\n\n${resetUrl}\n\nThis link will expire in 1 hour.\n\nIf you didn’t request this, please ignore this email.\n\nBest regards,\nSwiftRide Team`,
+//     });
+//     try {
+//       await ActivityLog.create({
+//         action: "Password Reset Request",
+//         userId: customer._id,
+//         userEmail: customer.email,
+//         success: true,
+//         details: "Password reset email sent",
+//         ipAddress: req.ip || req.connection.remoteAddress,
+//       });
+//     } catch (logError) {
+//       console.error("ActivityLog Error:", logError.message);
+//     }
+//     res.status(200).json({
+//       success: true,
+//       message: "Reset password email sent. Please check your inbox.",
+//     });
+//   } catch (error) {
+//     console.error("Password Reset Email Error:", error.message);
+//     customer.resetPasswordToken = null;
+//     customer.resetPasswordExpire = null;
+//     await customer.save();
+//     try {
+//       await ActivityLog.create({
+//         action: "Password Reset Request",
+//         userId: customer._id,
+//         userEmail: customer.email,
+//         success: false,
+//         details: `Error sending reset email: ${error.message}`,
+//         ipAddress: req.ip || req.connection.remoteAddress,
+//       });
+//     } catch (logError) {
+//       console.error("ActivityLog Error:", logError.message);
+//     }
+//     res.status(500).json({ success: false, message: `Error sending reset email: ${error.message}` });
+//   }
+// });
+const forgotPassword = asyncHandler(async (req, res, next) => {
+  console.log('Forgot Password Payload:', req.body);
   const { email } = req.body;
 
   if (!email) {
-    try {
-      await ActivityLog.create({
-        action: "Password Reset Request",
-        userEmail: email || "Unknown",
-        success: false,
-        details: "Email is required",
-        ipAddress: req.ip || req.connection.remoteAddress,
-      });
-    } catch (logError) {
-      console.error("ActivityLog Error:", logError.message);
-    }
+    await ActivityLog.create({
+      action: "Password Reset Request",
+      userEmail: email || "Unknown",
+      success: false,
+      details: "Email is required",
+      ipAddress: req.ip || req.connection.remoteAddress,
+    }).catch((logError) => console.error('ActivityLog Error:', logError.message));
     return res.status(400).json({ success: false, message: "Email is required" });
   }
 
   const customer = await Customer.findOne({ email: sanitizeHtml(email.trim().toLowerCase()) });
   if (!customer) {
-    try {
-      await ActivityLog.create({
-        action: "Password Reset Request",
-        userEmail: email,
-        success: false,
-        details: "No account found with that email",
-        ipAddress: req.ip || req.connection.remoteAddress,
-      });
-    } catch (logError) {
-      console.error("ActivityLog Error:", logError.message);
-    }
+    await ActivityLog.create({
+      action: "Password Reset Request",
+      userEmail: email,
+      success: false,
+      details: "No account found with that email",
+      ipAddress: req.ip || req.connection.remoteAddress,
+    }).catch((logError) => console.error('ActivityLog Error:', logError.message));
     return res.status(404).json({ success: false, message: "No account found with that email" });
   }
 
-  const resetToken = crypto.randomBytes(20).toString("hex");
-  const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
-
-  customer.resetPasswordToken = hashedToken;
-  customer.resetPasswordExpire = Date.now() + 60 * 60 * 1000; // 1 hour
+  const otp = customer.getOtp();
   await customer.save();
 
-  const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
-
   try {
-    console.log("Sending password reset email to:", customer.email);
+    console.log('Sending OTP email to:', customer.email);
     await sendEmail({
       email: customer.email,
-      subject: "Reset Your GoBus Password",
-      message: `Hi ${customer.fname},\n\nYou requested to reset your password. Please click the link below:\n\n${resetUrl}\n\nThis link will expire in 1 hour.\n\nIf you didn’t request this, please ignore this email.\n\nBest regards,\nGoBus Team`,
+      fname: customer.fname,
+      subject: "Your QuickBites Password Reset OTP",
+      message: `Hi ${customer.fname},\n\nYour 6-digit OTP for password reset is: ${otp}\n\nThis OTP is valid for 10 minutes.\n\nBest regards,\nQuickBites Team`,
     });
-    try {
-      await ActivityLog.create({
-        action: "Password Reset Request",
-        userId: customer._id,
-        userEmail: customer.email,
-        success: true,
-        details: "Password reset email sent",
-        ipAddress: req.ip || req.connection.remoteAddress,
-      });
-    } catch (logError) {
-      console.error("ActivityLog Error:", logError.message);
-    }
+
+    console.log('OTP email sent successfully');
+    await ActivityLog.create({
+      action: "Password Reset Request",
+      userId: customer._id,
+      userEmail: customer.email,
+      success: true,
+      details: "Password reset OTP sent",
+      ipAddress: req.ip || req.connection.remoteAddress,
+    }).catch((logError) => console.error('ActivityLog Error:', logError.message));
+
     res.status(200).json({
       success: true,
-      message: "Reset password email sent. Please check your inbox.",
+      message: "OTP sent to your email.",
+      userId: customer._id,
     });
   } catch (error) {
-    console.error("Password Reset Email Error:", error.message);
-    customer.resetPasswordToken = null;
-    customer.resetPasswordExpire = null;
+    console.error('Password Reset OTP Email Error:', error.message);
+    customer.otp = null;
+    customer.otpExpire = null;
     await customer.save();
-    try {
-      await ActivityLog.create({
-        action: "Password Reset Request",
-        userId: customer._id,
-        userEmail: customer.email,
-        success: false,
-        details: `Error sending reset email: ${error.message}`,
-        ipAddress: req.ip || req.connection.remoteAddress,
-      });
-    } catch (logError) {
-      console.error("ActivityLog Error:", logError.message);
-    }
-    res.status(500).json({ success: false, message: `Error sending reset email: ${error.message}` });
+    await ActivityLog.create({
+      action: "Password Reset Request",
+      userId: customer._id,
+      userEmail: customer.email,
+      success: false,
+      details: `Error sending OTP email: ${error.message}`,
+      ipAddress: req.ip || req.connection.remoteAddress,
+    }).catch((logError) => console.error('ActivityLog Error:', logError.message));
+
+    return res.status(500).json({ success: false, message: `Error sending OTP email: ${error.message}` });
   }
 });
+
+exports.forgotPassword = forgotPassword;
 
 // @desc    Reset password via email token
 // @route   POST /api/v1/auth/reset-password/:token
 // @access  Public
+// exports.resetPassword = asyncHandler(async (req, res, next) => {
+//   console.log("Reset Password Payload:", req.body, "Token:", req.params.token);
+//   const hashedToken = crypto.createHash("sha256").update(req.params.token).digest("hex");
+
+//   const customer = await Customer.findOne({
+//     resetPasswordToken: hashedToken,
+//     resetPasswordExpire: { $gt: Date.now() },
+//   });
+
+//   if (!customer) {
+//     try {
+//       await ActivityLog.create({
+//         action: "Password Reset Attempt",
+//         userEmail: "Unknown",
+//         success: false,
+//         details: "Invalid or expired reset token",
+//         ipAddress: req.ip || req.connection.remoteAddress,
+//       });
+//     } catch (logError) {
+//       console.error("ActivityLog Error:", logError.message);
+//     }
+//     return res.status(400).json({ success: false, message: "Invalid or expired reset token" });
+//   }
+
+//   const { password, confirmPassword } = req.body;
+//   if (!password || !confirmPassword) {
+//     try {
+//       await ActivityLog.create({
+//         action: "Password Reset Attempt",
+//         userId: customer._id,
+//         userEmail: customer.email,
+//         success: false,
+//         details: "Password and confirm password are required",
+//         ipAddress: req.ip || req.connection.remoteAddress,
+//       });
+//     } catch (logError) {
+//       console.error("ActivityLog Error:", logError.message);
+//     }
+//     return res.status(400).json({ success: false, message: "Password and confirm password are required" });
+//   }
+
+//   if (password !== confirmPassword) {
+//     try {
+//       await ActivityLog.create({
+//         action: "Password Reset Attempt",
+//         userId: customer._id,
+//         userEmail: customer.email,
+//         success: false,
+//         details: "Passwords do not match",
+//         ipAddress: req.ip || req.connection.remoteAddress,
+//       });
+//     } catch (logError) {
+//       console.error("ActivityLog Error:", logError.message);
+//     }
+//     return res.status(400).json({ success: false, message: "Passwords do not match" });
+//   }
+
+//   if (
+//     password.length < 8 ||
+//     !/[A-Z]/.test(password) ||
+//     !/[a-z]/.test(password) ||
+//     !/[0-9]/.test(password) ||
+//     !/[!@#$%^&*(),.?":{}|<>]/.test(password)
+//   ) {
+//     try {
+//       await ActivityLog.create({
+//         action: "Password Reset Attempt",
+//         userId: customer._id,
+//         userEmail: customer.email,
+//         success: false,
+//         details: "Password does not meet requirements",
+//         ipAddress: req.ip || req.connection.remoteAddress,
+//       });
+//     } catch (logError) {
+//       console.error("ActivityLog Error:", logError.message);
+//     }
+//     return res.status(400).json({
+//       success: false,
+//       message: "Password must be at least 8 characters and include uppercase, lowercase, number, and special character",
+//     });
+//   }
+
+//   customer.password = password;
+//   customer.resetPasswordToken = null;
+//   customer.resetPasswordExpire = null;
+//   await customer.save();
+
+//   try {
+//     await ActivityLog.create({
+//       action: "Password Reset Attempt",
+//       userId: customer._id,
+//       userEmail: customer.email,
+//       success: true,
+//       details: "Password reset successfully",
+//       ipAddress: req.ip || req.connection.remoteAddress,
+//     });
+//   } catch (logError) {
+//     console.error("ActivityLog Error:", logError.message);
+//   }
+
+//   res.status(200).json({ success: true, message: "Password reset successful. You can now log in." });
+// });
+
+
 exports.resetPassword = asyncHandler(async (req, res, next) => {
-  console.log("Reset Password Payload:", req.body, "Token:", req.params.token);
-  const hashedToken = crypto.createHash("sha256").update(req.params.token).digest("hex");
+  const { token } = req.params;
+  console.log('Reset Password Token:', token.substring(0, 50) + '...');
+
+  // Hash the provided token to match the stored resetPasswordToken
+  const resetPasswordToken = crypto
+    .createHash('sha256')
+    .update(token)
+    .digest('hex');
 
   const customer = await Customer.findOne({
-    resetPasswordToken: hashedToken,
+    resetPasswordToken,
     resetPasswordExpire: { $gt: Date.now() },
   });
 
   if (!customer) {
-    try {
-      await ActivityLog.create({
-        action: "Password Reset Attempt",
-        userEmail: "Unknown",
-        success: false,
-        details: "Invalid or expired reset token",
-        ipAddress: req.ip || req.connection.remoteAddress,
-      });
-    } catch (logError) {
-      console.error("ActivityLog Error:", logError.message);
-    }
-    return res.status(400).json({ success: false, message: "Invalid or expired reset token" });
+    await ActivityLog.create({
+      action: 'Password Reset Attempt',
+      userEmail: 'Unknown',
+      success: false,
+      details: 'Invalid or expired reset token',
+      ipAddress: req.ip || req.connection.remoteAddress,
+    }).catch((logError) => console.error('ActivityLog Error:', logError.message));
+
+    return res.status(400).json({ success: false, message: 'Invalid or expired reset token' });
   }
 
   const { password, confirmPassword } = req.body;
   if (!password || !confirmPassword) {
-    try {
-      await ActivityLog.create({
-        action: "Password Reset Attempt",
-        userId: customer._id,
-        userEmail: customer.email,
-        success: false,
-        details: "Password and confirm password are required",
-        ipAddress: req.ip || req.connection.remoteAddress,
-      });
-    } catch (logError) {
-      console.error("ActivityLog Error:", logError.message);
-    }
-    return res.status(400).json({ success: false, message: "Password and confirm password are required" });
+    return res.status(400).json({ success: false, message: 'Password and confirm password are required' });
   }
 
   if (password !== confirmPassword) {
-    try {
-      await ActivityLog.create({
-        action: "Password Reset Attempt",
-        userId: customer._id,
-        userEmail: customer.email,
-        success: false,
-        details: "Passwords do not match",
-        ipAddress: req.ip || req.connection.remoteAddress,
-      });
-    } catch (logError) {
-      console.error("ActivityLog Error:", logError.message);
-    }
-    return res.status(400).json({ success: false, message: "Passwords do not match" });
+    return res.status(400).json({ success: false, message: 'Passwords do not match' });
   }
 
+  // Validate password strength
   if (
     password.length < 8 ||
     !/[A-Z]/.test(password) ||
@@ -910,43 +1067,30 @@ exports.resetPassword = asyncHandler(async (req, res, next) => {
     !/[0-9]/.test(password) ||
     !/[!@#$%^&*(),.?":{}|<>]/.test(password)
   ) {
-    try {
-      await ActivityLog.create({
-        action: "Password Reset Attempt",
-        userId: customer._id,
-        userEmail: customer.email,
-        success: false,
-        details: "Password does not meet requirements",
-        ipAddress: req.ip || req.connection.remoteAddress,
-      });
-    } catch (logError) {
-      console.error("ActivityLog Error:", logError.message);
-    }
     return res.status(400).json({
       success: false,
-      message: "Password must be at least 8 characters and include uppercase, lowercase, number, and special character",
+      message: 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character',
     });
   }
 
+  // Update password
   customer.password = password;
-  customer.resetPasswordToken = null;
-  customer.resetPasswordExpire = null;
+  customer.resetPasswordToken = undefined;
+  customer.resetPasswordExpire = undefined;
+  customer.otp = undefined;
+  customer.otpExpire = undefined;
   await customer.save();
 
-  try {
-    await ActivityLog.create({
-      action: "Password Reset Attempt",
-      userId: customer._id,
-      userEmail: customer.email,
-      success: true,
-      details: "Password reset successfully",
-      ipAddress: req.ip || req.connection.remoteAddress,
-    });
-  } catch (logError) {
-    console.error("ActivityLog Error:", logError.message);
-  }
+  await ActivityLog.create({
+    action: 'Password Reset',
+    userId: customer._id,
+    userEmail: customer.email,
+    success: true,
+    details: 'Password reset successfully',
+    ipAddress: req.ip || req.connection.remoteAddress,
+  }).catch((logError) => console.error('ActivityLog Error:', logError.message));
 
-  res.status(200).json({ success: true, message: "Password reset successful. You can now log in." });
+  res.status(200).json({ success: true, message: 'Password reset successful. You can now log in.' });
 });
 
 // ==================== DELETE CUSTOMER ====================
@@ -1106,5 +1250,3 @@ exports.resetPassword = exports.resetPassword;
 exports.deleteCustomer = exports.deleteCustomer;
 exports.uploadImage = exports.uploadImage;
 exports.getMe = exports.getMe;
-
-// 
