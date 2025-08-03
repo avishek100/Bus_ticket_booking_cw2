@@ -342,16 +342,16 @@ exports.login = asyncHandler(async (req, res, next) => {
     console.log('Checking for customer with email:', sanitizedEmail);
     const customer = await Customer.findOne({ email: sanitizedEmail }).select('+password');
     console.log('Customer lookup result:', customer ? { id: customer._id, email: customer.email, isVerified: customer.isVerified } : 'No customer found');
-    
+
     if (!customer) {
       // Let's also check if there are any customers in the database
       const allCustomers = await Customer.find({}).select('email isVerified');
       console.log('All customers in database:', allCustomers.map(c => ({ email: c.email, isVerified: c.isVerified })));
-      
+
       // Try a case-insensitive search
       const caseInsensitiveCustomer = await Customer.findOne({ email: { $regex: new RegExp(`^${sanitizedEmail}$`, 'i') } }).select('+password');
       console.log('Case-insensitive search result:', caseInsensitiveCustomer ? { id: caseInsensitiveCustomer._id, email: caseInsensitiveCustomer.email } : 'No customer found with case-insensitive search');
-      
+
       await ActivityLog.create({
         action: "Login Attempt",
         userEmail: sanitizedEmail,
