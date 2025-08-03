@@ -10,6 +10,7 @@ const fs = require("fs");
 const axios = require("axios");
 const jwt = require("jsonwebtoken");
 // 
+// 
 // Validation middleware for registration
 const validateRegister = [
   body("fname").trim().notEmpty().withMessage("First name is required"),
